@@ -73,8 +73,8 @@ class GuaraniIDE(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title('🐍 Guarani IDE - Transpilador Guarani')
-        self.geometry('1500x950')
-        self.minsize(1000, 700)
+        self.geometry('1200x800')
+        self.minsize(900, 600)
         self.current_file = None
         self.pipeline = GuaraniPipeline()
         self.modified = False
