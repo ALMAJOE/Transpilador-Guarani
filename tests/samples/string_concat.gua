@@ -1,0 +1,4 @@
+# Concatenação de strings
+nheeng nome = "Maria"
+nheeng mensagem = "Olá, " + nome
+hai mensagem

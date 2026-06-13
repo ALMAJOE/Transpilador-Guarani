@@ -1,0 +1,8 @@
+# Expressões aritméticas e precedência
+papapy x = 3
+papapy y = 4
+papapy z = x * y + 2
+papapy w = (x + y) * 2
+kuatia resultado = z / 2
+hai resultado
+hai w

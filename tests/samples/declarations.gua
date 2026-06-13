@@ -1,0 +1,10 @@
+# Declaração de variáveis e impressão básica
+papapy a = 10
+kuatia b = 2.5
+nheeng saudacao = "Olá"
+anhete ativo = mante
+
+hai a
+hai b
+hai saudacao
+hai ativo

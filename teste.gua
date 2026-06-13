@@ -1,0 +1,54 @@
+# =============================================
+# teste.gua - programa de teste completo
+# =============================================
+
+# 1. Declaracao dos 4 tipos de dados
+papapy idade = 20
+kuatia altura = 1.75
+nheeng nome = "Jose"
+anhete ativo = mante
+
+# 2. Impressao (hai = print)
+hai "Ola, mundo!"
+hai nome
+hai idade
+hai altura
+
+# 3. Condicional (ara = if, nahaniri = else)
+ara idade >= 18:
+    hai "Maior de idade"
+nahaniri:
+    hai "Menor de idade"
+
+# 4. while (jave)
+papapy contador = 0
+jave contador < 5:
+    hai contador
+    contador = contador + 1
+
+# 5. for (guata ... ate)
+guata i = 1 ate 3:
+    hai i
+
+# 6. do-while (japo ... jave)
+papapy x = 1
+japo:
+    hai x
+    x = x + 1
+jave x <= 3
+
+# 7. Expressao com precedencia (2 + 3 * 4 = 14, nao 20)
+papapy resultado = 2 + 3 * 4
+hai resultado
+
+# 8. Operadores booleanos (ha = and, tere = or)
+ara idade >= 18 ha ativo == mante:
+    hai "Adulto ativo"
+
+# 9. Exemplo com false
+anhete inativo = jasuka
+hai inativo
+
+# 10. Concatenacao de strings
+nheeng saudacao = "Ola, " + nome
+hai saudacao

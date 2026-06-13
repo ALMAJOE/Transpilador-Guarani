@@ -1,0 +1,13 @@
+# Blocos aninhados
+papapy valor = 1
+ara valor < 5:
+    hai "Dentro do if"
+    jave valor < 2:
+        hai valor
+        valor = valor + 1
+    ara valor < 3:
+        hai "Valor é menor que 3"
+    nahaniri:
+        hai "Valor maior ou igual a 3"
+    valor = valor + 2
+hai "Fim"

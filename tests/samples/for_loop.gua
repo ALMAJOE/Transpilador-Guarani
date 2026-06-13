@@ -1,0 +1,5 @@
+# For com limite inclusivo
+guata i = 1 ate 3:
+    hai i
+    papapy par = i * 2
+    hai par

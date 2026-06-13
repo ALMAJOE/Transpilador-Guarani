@@ -1,0 +1,6 @@
+# Do-while emulado
+papapy x = 1
+japo:
+    hai x
+    x = x + 1
+jave x <= 3

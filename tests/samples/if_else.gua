@@ -1,0 +1,6 @@
+# If / else com comparação
+papapy idade = 17
+ara idade >= 18:
+    hai "Maior de idade"
+nahaniri:
+    hai "Menor de idade"

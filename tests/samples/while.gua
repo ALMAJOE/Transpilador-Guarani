@@ -1,0 +1,5 @@
+# While simples
+papapy contador = 0
+jave contador < 5:
+    hai contador
+    contador = contador + 1

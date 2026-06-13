@@ -1,0 +1,7 @@
+# Operadores booleanos
+papapy idade = 25
+anhete ativo = mante
+ara idade >= 18 ha ativo == mante:
+    hai "Adulto ativo"
+nahaniri:
+    hai "Condição não satisfeita"
