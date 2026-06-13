@@ -860,14 +860,116 @@ OK
 
 ---
 
-## 17. Conclusão
 
-O **GuaCode** demonstra, de ponta a ponta, o funcionamento interno de uma linguagem de programação, o usuário escreve em uma linguagem de alto nível inspirada no idioma Guarani, o sistema tokeniza o código, constrói uma árvore sintática, verifica tipos e escopos, gera Python equivalente e executa o resultado.
+## 17. Desafios de Implementação e Limitações Conhecidas
 
-De modo que se torna mais do que apenas um exercício acadêmico, o projeto reúne em uma base de código coesa e testável os pilares estudados na disciplina de Teoria da Computação e Compiladores, sendo estes:
+Esta seção documenta as principais decisões técnicas tomadas durante o desenvolvimento, os desafios encontrados em cada etapa do pipeline e as limitações que permanecem na versão atual.
+
+---
+
+### 17.1 Indentação Sensível ao Contexto
+
+**Desafio:** O PLY não oferece suporte nativo a tokens sintéticos baseados em indentação. Como a linguagem Guarani delimita blocos por indentação (ao estilo Python), foi necessário criar o `IndentLexer` — um *wrapper* que pré-processa o código fonte linha a linha, mantém uma pilha de níveis de indentação e injeta os tokens `INDENT`, `DEDENT` e `NEWLINE` manualmente antes de repassar a sequência ao parser.
+
+**Decisão:** Construir o `IndentLexer` como uma camada separada sobre o lexer base do PLY, em vez de tentar estender as regras padrão. Isso isolou a complexidade da indentação e manteve o lexer principal simples.
+
+**Limitação atual:** Cada linha é reprocessada por uma nova instância do lexer base, o que é funcionalmente correto mas ineficiente para arquivos grandes. Além disso, a mistura de tabs e espaços lança `IndentationError`, mas o número de espaços equivalente a um tab está fixo em 4.
+
+---
+
+### 17.2 Gramática sem Recursão à Esquerda e sem Produções Vazias
+
+**Desafio:** O enunciado da disciplina exigiu que a gramática fosse escrita sem recursão à esquerda e sem produções vazias (ε). Isso é natural em parsers LL, mas o PLY usa LALR(1), que toleraria recursão à esquerda. Atender às duas restrições simultaneamente tornou a gramática significativamente mais verbosa.
+
+**Decisão:** Para operadores aritméticos, a solução foi criar regras `add_tail` e `mul_tail` que retornam listas de `(operador, nó)`, processadas pela função auxiliar `_build_left()` para reconstruir a associatividade à esquerda na AST — mesmo com a gramática sendo recursiva à direita.
+
+**Exemplo — regras geradas para adição:**
+```
+add_expr : mul_expr add_tail
+         | mul_expr
+add_tail : PLUS  mul_expr add_tail
+         | PLUS  mul_expr
+         | MINUS mul_expr add_tail
+         | MINUS mul_expr
+```
+
+Sem a restrição, a regra seria apenas `add_expr : add_expr PLUS mul_expr | mul_expr`.
+
+---
+
+### 17.3 Conflitos no Parser LALR(1)
+
+**Desafio:** O par `if` simples / `if-else` é a fonte clássica do conflito *dangling else* em parsers LALR(1). O PLY resolve por padrão favorecendo o `shift` (associando o `else` ao `if` mais interno), mas isso pode mascarar erros de gramática.
+
+**Decisão:** As regras `p_if_simple` e `p_if_else` foram escritas como produções completamente separadas, deixando a gramática desambiguada sem depender do comportamento padrão do PLY.
+
+**Limitação atual:** Não há suporte a `elif`. Adicionar essa construção exigiria uma nova produção na gramática e um novo nó na AST, o que introduziria conflitos S/R adicionais que precisariam ser resolvidos explicitamente.
+
+---
+
+### 17.4 Inferência de Tipos e Escopos Aninhados
+
+**Desafio:** A linguagem é estaticamente tipada, mas a tipagem precisa ser inferida nas expressões em tempo de compilação. Operações como `+` têm comportamento diferente dependendo dos tipos dos operandos (`int + int`, `float + int`, `string + string`), e cada caso precisa ser tratado separadamente no `_type_of`.
+
+**Decisão:** Implementar a tabela de símbolos com encadeamento de escopos (`SymbolTable.parent`), de forma que cada bloco aninhado (`if`, `while`, `for`) cria um novo escopo filho que herda os símbolos do pai. Promoção numérica `int → float` foi permitida implicitamente; demais conversões são erros.
+
+**Limitação atual:** A condição dos blocos `ara` (if) e `jave` (while) exige o tipo `bool` estritamente. Expressões inteiras usadas como condição — padrão comum em C e Python — são rejeitadas pelo analisador semântico.
+
+---
+
+### 17.5 Emulação de Construções sem Equivalente em Python
+
+**Desafio:** O `do-while` (`japo ... jave`) não existe em Python. A tradução direta não é possível.
+
+**Decisão:** Emular com `while True:` seguido de um `if not (condição): break` ao final do bloco — o que preserva a semântica de execução garantida da primeira iteração.
+
+**Python gerado para `japo ... jave`:**
+```python
+while True:
+    # corpo do bloco
+    if not (condição):
+        break
+```
+
+**Limitação atual:** O `break` gerado encerra apenas o laço mais interno. Em blocos `do-while` aninhados, o comportamento é correto, mas a legibilidade do código gerado diminui.
+
+---
+
+### 17.6 Recuperação de Erros
+
+**Desafio:** Em compiladores reais, é desejável que o processo continue após encontrar um erro, acumulando todos os problemas de uma vez para reportar ao usuário.
+
+**Decisão:** O analisador semântico acumula erros em `self.errors` e continua a análise. O parser, por outro lado, interrompe ao primeiro erro sintático com `SyntaxError`, pois implementar recuperação de erros no PLY (via token especial `error`) aumentaria a complexidade da gramática consideravelmente.
+
+**Limitação atual:** Um único erro de sintaxe encerra toda a compilação. O usuário não recebe informações sobre outros erros que possam existir no restante do código.
+
+---
+
+### Resumo das Limitações
+
+| Limitação | Impacto | Complexidade para resolver |
+|---|---|---|
+| Sem `elif` | Encadeamento de condicionais verboso | Média |
+| Condições de laço exigem `bool` estrito | Rejeita padrões comuns | Baixa |
+| Recuperação de erros sintáticos ausente | Um erro por compilação | Alta |
+| `IndentLexer` recria lexer por linha | Ineficiência em arquivos grandes | Baixa |
+| Tabs equivalem fixamente a 4 espaços | Inconsistência com editores configurados diferente | Baixa |
+| Sem funções ou procedimentos | Linguagem limitada a scripts lineares | Alta |
+
+---
+
+## 18. Conclusão
+
+O **GuaCode** demonstra, de ponta a ponta, o funcionamento interno de uma linguagem de programação: o usuário escreve em Guarani, o sistema tokeniza o código, constrói uma árvore sintática, verifica tipos e escopos, gera Python equivalente e executa o resultado — tudo em uma única pipeline modular e testável.
+
+Mais do que cumprir as etapas clássicas de um compilador, o projeto enfrentou decisões de design concretas que tornam sua implementação didaticamente relevante. A construção do `IndentLexer` mostrou na prática por que linguagens sensíveis à indentação exigem tratamento especial na análise léxica. A gramática sem recursão à esquerda e sem produções vazias evidenciou a diferença entre o que é formalmente correto e o que um gerador LALR(1) consegue processar eficientemente. A análise semântica com escopos aninhados e inferência de tipos ilustrou como um compilador pode detectar erros antes mesmo de o código ser executado.
+
+A separação entre o núcleo (`guarani`), a interface de linha de comando (`main.py`) e a IDE gráfica (`ide.py`) — todos compartilhando o mesmo `GuaraniPipeline` — demonstra na prática como uma arquitetura modular permite reutilizar a mesma lógica de compilação em contextos diferentes, exatamente como ocorre em ferramentas reais como GCC, LLVM e o próprio CPython.
+
+As limitações documentadas na seção anterior — ausência de `elif`, condições estritamente booleanas, recuperação de erros sintáticos e suporte a funções — não são falhas de execução, mas consequências naturais do escopo definido para a disciplina. Cada uma delas representa um ponto de extensão claro e tecnicamente viável para versões futuras da linguagem.
 
 ```
 Escrever → Tokenizar → Analisar (sintaxe) → Verificar (semântica) → Gerar → Executar
 ```
 
-A separação entre o núcleo (`guarani`), a interface de linha de comando (`main.py`) e a IDE gráfica (`ide.py`), todos compartilhando o mesmo `GuaraniPipeline`, mostra na prática como uma arquitetura modular permite reutilizar a mesma lógica de compilação em contextos diferentes — exatamente como ocorre em ferramentas reais.
+O GuaCode é, em sua essência, uma prova de que os conceitos estudados em Teoria da Computação e Compiladores não são apenas formalismos teóricos — são os mesmos mecanismos que sustentam todas as linguagens de programação modernas.
